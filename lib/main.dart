@@ -8,6 +8,7 @@ import 'package:flutter_device_type/flutter_device_type.dart';
 import 'package:intl/intl.dart';
 import 'dart:collection';
 import 'package:currency_converter/error/api_error.dart';
+import 'package:firebase_admob/firebase_admob.dart';
 
 final RouteObserver<PageRoute> routeObserver = new RouteObserver<PageRoute>();
 
@@ -33,6 +34,8 @@ class FlutterCurrencyConverter extends StatelessWidget {
   }
 }
 
+const String testDevice = "5ACA2DB358F2857DCCA953A2DD2F1017";
+
 class MainPage extends StatefulWidget {
   MainPage({Key key, this.title}) : super(key: key);
   final String title;
@@ -42,24 +45,33 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> with RouteAware {
-
   dynamic preferences = SharedPreferences;
-
   var _isConvertionLoading = true;
   var _isRatesLoading = true;
   var _isSearchOpened = false;
   var _isKeyEntered = false;
-
   var service = new Service();
-
   var keyIndices = new List();
   var searchIndices = new List();
-
   var convertion = new Convertion();
   var rates = new LinkedHashMap();
-
   var currentValue = 1;
   var convertedValue = 0.0;
+  BannerAd _bannerAd;
+  static const MobileAdTargetingInfo targetingInfo = MobileAdTargetingInfo(
+      testDevices: testDevice != null ? <String>[testDevice] : null,
+      nonPersonalizedAds: true,
+      keywords: <String>['Education']);
+
+  BannerAd createBannerAd() {
+    return BannerAd(
+        adUnitId: "ca-app-pub-6902830085354035/5954183386",
+        size: AdSize.smartBanner,
+        targetingInfo: targetingInfo,
+        listener: (MobileAdEvent event) {
+          print("BannerAd $event");
+        });
+  }
 
   EdgeInsets _getEdgeInsets() {
     if (Device.get().isIos && Device.get().isTablet) {
@@ -69,7 +81,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
       return new EdgeInsets.fromLTRB(24.0, 36.0, 24.0, 0.0);
     }
     else {
-      return new EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0.0);
+      return new EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 0.0);
     }
   }
 
@@ -89,7 +101,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     if (!(preferences.getKeys().contains("currencyParam")) && !(preferences.getKeys().contains("toParam"))) {
       await preferences.setString("currencyParam", "USD");
-      await preferences.setString("toParam", "PHP");
+      await preferences.setString("toParam", "IDR");
       print("Successfully Initialized User Defaults");
     }
     else {
@@ -136,7 +148,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
 
       this.keyIndices.clear();
       for (var key in response.keys) {
-        print(response[key]["flag"] + " " + response[key]["definition"] + ": " + response[key]["symbol"].toString() + response[key]["value"].toString());
+        // print(response[key]["flag"] + " " + response[key]["definition"] + ": " + response[key]["symbol"].toString() + response[key]["value"].toString());
         keyIndices.add(key);
       }
 
@@ -148,7 +160,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
       });
     }
     else if (response is ApiError) {
-      _showDialog("Error", response.error);
+      _showDialog("Error", "response.error getrates");
     }
   }
 
@@ -192,7 +204,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
       });
     }
     else if (response is ApiError) {
-      _showDialog("Error", response.error);
+      _showDialog("Error", "response.error");
     }
   }
 
@@ -257,6 +269,11 @@ class _MainPageState extends State<MainPage> with RouteAware {
   @override
   void initState() {
     super.initState();
+    FirebaseAdMob.instance
+        .initialize(appId: "ca-app-pub-6902830085354035~9893428398");
+    _bannerAd = createBannerAd()
+      ..load()
+      ..show();
     _initPreferences();
   }
 
@@ -269,6 +286,7 @@ class _MainPageState extends State<MainPage> with RouteAware {
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    _bannerAd.dispose();
     super.dispose();
   }
 

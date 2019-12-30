@@ -7,15 +7,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 class Service {
   
-  String url = "https://v3.exchangerate-api.com/";
-  String apiKey = "defff1f9da263b5ebd3017ac";
+  String url = "https://api.exchangerate-api.com/v4/latest/";
 
   String get rates {
-    return url + "bulk/" + apiKey + "/";
-  }
-
-  String get convertion {
-    return url + "pair/" + apiKey + "/";
+    return url;
   }
 
   dynamic getRates() async {
@@ -26,9 +21,9 @@ class Service {
     final response = await http.get(url);
     final map = json.decode(response.body);
 
-    if (map["result"] == "success") {
+    if (response.statusCode == 200) {
       final ratesJSON = map["rates"];
-      final ratesObject = new Rates.fromJson(ratesJSON);
+      final ratesObject = Rates.fromJson(ratesJSON);
 
       ratesObject.initValues();
       
@@ -43,14 +38,18 @@ class Service {
   dynamic getConvertion() async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     final currencyParam = preferences.getString("currencyParam") ?? '';
-    final toParam = preferences.getString("toParam") ?? '';
 
-    var url = convertion + currencyParam + "/" + toParam;
+    var url = rates + currencyParam;
     final response = await http.get(url);
     final map = json.decode(response.body);
 
-    if (map["result"] == "success") {
-      final convertionObject = new Convertion.fromJson(map);
+    if (response.statusCode == 200) {
+      final convert = {
+        "from": preferences.getString("currencyParam"),
+        "to": preferences.getString("toParam"),
+        "rate": map["rates"][preferences.getString("toParam")]
+      };
+      final convertionObject = new Convertion.fromJson(convert);
       
       convertionObject.initValues();
 
